@@ -2,11 +2,9 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Calculadora pessoal de loot. Cadastre itens, informe quantidades e veja o total em GP.">
-
-<title>Calculadora de Loot • Tibia Relic</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Calculadora pessoal de loot para Tibia Relic.">
+<title>Calculadora de Loot | Tibia Relic</title>
 <link rel="icon" type="image/png" href="./tibia-relic-logo.png">
 
 <style>
@@ -20,9 +18,7 @@
   --gold: #ecc46c;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
@@ -63,9 +59,7 @@ header {
   height: auto;
 }
 
-.logo-link:hover {
-  filter: brightness(1.1);
-}
+.logo-link:hover { filter: brightness(1.1); }
 
 h1 {
   font-size: clamp(25px, 5vw, 36px);
@@ -124,9 +118,7 @@ button {
   font-weight: 700;
 }
 
-button:hover {
-  filter: brightness(1.12);
-}
+button:hover { filter: brightness(1.12); }
 
 :focus-visible {
   outline: 3px solid var(--gold);
@@ -172,30 +164,18 @@ th {
   color: #d7e1ee;
 }
 
-tbody tr:nth-child(even) {
-  background: #17212d;
-}
+tbody tr:nth-child(even) { background: #17212d; }
+tbody tr:last-child td { border-bottom: 0; }
 
-tbody tr:last-child td {
-  border-bottom: 0;
-}
-
-.number {
-  text-align: right;
-}
+.number { text-align: right; }
 
 td input {
   width: 110px;
   text-align: right;
 }
 
-td input:invalid {
-  border-color: #ff8e8e;
-}
-
-td:first-child {
-  font-weight: 600;
-}
+td input:invalid { border-color: #ff8e8e; }
+td:first-child { font-weight: 600; }
 
 .personal {
   display: block;
@@ -224,16 +204,14 @@ dialog {
   max-height: 90vh;
 }
 
-dialog::backdrop {
-  background: #000b;
-}
+dialog::backdrop { background: #000b; }
 
-label {
+.field {
   display: block;
   margin-top: 14px;
 }
 
-label input, label select {
+.field input, .field select {
   display: block;
   width: 100%;
   margin-top: 5px;
@@ -246,9 +224,7 @@ label input, label select {
   margin-top: 24px;
 }
 
-#form-error {
-  color: #ffaaaa;
-}
+#form-error { color: #ffaaaa; }
 
 footer {
   color: var(--muted);
@@ -265,9 +241,7 @@ footer {
 }
 
 @media (max-width: 600px) {
-  main {
-    padding: 24px 12px;
-  }
+  main { padding: 24px 12px; }
 
   .heading {
     flex-direction: column;
@@ -275,27 +249,17 @@ footer {
     gap: 16px;
   }
 
-  .logo {
-    width: 120px;
-  }
-
-  .total {
-    width: 100%;
-  }
-
-  th, td {
-    padding: 10px;
-  }
+  .logo { width: 120px; }
+  .total { width: 100%; }
+  th, td { padding: 10px; }
 }
 </style>
 </head>
 
 <body>
 <main>
-
   <header>
     <div class="heading">
-
       <a
         class="logo-link"
         href="https://www.tibiarelic.com/"
@@ -316,7 +280,6 @@ footer {
         <h1>Calculadora de Loot</h1>
         <p>Seus itens, suas quantidades e seu total em GP.</p>
       </div>
-
     </div>
 
     <div class="total">
@@ -329,7 +292,6 @@ footer {
     <button id="add" class="primary">+ Incluir item</button>
     <button id="export">Exportar backup</button>
     <button id="import">Importar backup</button>
-
     <input
       type="file"
       id="backup-file"
@@ -338,10 +300,7 @@ footer {
     >
   </div>
 
-  <label class="sr-only" for="search">
-    Buscar item ou cidade
-  </label>
-
+  <label class="sr-only" for="search">Buscar item ou cidade</label>
   <input
     id="search"
     type="search"
@@ -353,4 +312,510 @@ footer {
       <thead>
         <tr>
           <th scope="col">Item</th>
-          <th scope="col"
+          <th scope="col" class="number">Preço (GP)</th>
+          <th scope="col" class="number">Quantidade</th>
+          <th scope="col" class="number">Total (GP)</th>
+          <th scope="col">Cidade 1</th>
+          <th scope="col">Cidade 2</th>
+          <th scope="col">Cidade 3</th>
+        </tr>
+      </thead>
+      <tbody id="items"></tbody>
+    </table>
+  </div>
+
+  <p id="empty" hidden>Nenhum item encontrado.</p>
+
+  <p class="note">
+    Edite as quantidades ou inclua seus próprios itens.
+    Os nomes, preços e cidades da base não podem ser editados nesta tela.
+    O total inclui também os itens ocultos pela busca.
+  </p>
+
+  <div id="status" class="status" role="status" aria-live="polite"></div>
+
+  <footer>
+    Dados pessoais salvos neste navegador. Não são enviados a outros
+    usuários. Exporte um backup antes de trocar de dispositivo ou limpar
+    os dados do navegador. Dark Armor e Dark Helmet aguardam a definição
+    da cidade.
+  </footer>
+</main>
+
+<dialog id="item-dialog" aria-labelledby="dialog-title">
+  <form id="item-form">
+    <h2 id="dialog-title">Incluir item</h2>
+    <p>O item será adicionado apenas à sua calculadora.</p>
+
+    <label class="field">
+      Nome do item
+      <input
+        id="item-name"
+        maxlength="100"
+        required
+        autocomplete="off"
+      >
+    </label>
+
+    <label class="field">
+      Preço em GP
+      <input
+        id="item-price"
+        type="number"
+        min="0"
+        max="1000000000"
+        step="1"
+        required
+      >
+    </label>
+
+    <label class="field">
+      Cidade 1 (obrigatória)
+      <select id="city-1" required></select>
+    </label>
+
+    <label class="field">
+      Cidade 2 (opcional)
+      <select id="city-2"></select>
+    </label>
+
+    <label class="field">
+      Cidade 3 (opcional)
+      <select id="city-3"></select>
+    </label>
+
+    <p id="form-error" role="alert"></p>
+
+    <div class="actions">
+      <button type="button" id="cancel">Cancelar</button>
+      <button type="submit" class="primary">Incluir item</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+"use strict";
+
+const CITIES = [
+  "Thais",
+  "Fibula",
+  "Darashia",
+  "Kazordoon",
+  "Outlaw Camp",
+  "Tiquanda",
+  "Djinn",
+  "Sawsank",
+  "Venore"
+];
+
+const BASE_DATA = [
+  ["Battle Axe", 80, ["Thais"]],
+  ["Battle Hammer", 120, ["Thais"]],
+  ["Battle Shield", 95, ["Thais"]],
+  ["Brass Armor", 150, ["Thais"]],
+  ["Brass Legs", 49, ["Thais"]],
+  ["Chain Armor", 70, ["Thais"]],
+  ["Crossbow", 160, ["Fibula"]],
+  ["Dark Armor", 400, []],
+  ["Dark Helmet", 200, []],
+  ["Double Axe", 260, ["Darashia"]],
+  ["Dwarven Shield", 100, ["Kazordoon"]],
+  ["Halberd", 400, ["Thais"]],
+  ["Longsword", 51, ["Thais"]],
+  ["Mace", 30, ["Thais"]],
+  ["Morning Star", 100, ["Darashia", "Kazordoon"]],
+  ["Plate Armor", 400, ["Thais"]],
+  ["Plate Legs", 115, ["Thais", "Kazordoon"]],
+  ["Plate Shield", 45, ["Darashia", "Kazordoon"]],
+  ["Scale Armor", 75, ["Outlaw Camp"]],
+  ["Steel Helmet", 293, ["Darashia", "Kazordoon"]],
+  ["Steel Shield", 80, ["Darashia", "Kazordoon"]],
+  ["Sword", 25, ["Thais"]],
+  ["Two Handed Sword", 450, ["Thais"]]
+];
+
+const BASE = BASE_DATA.map(([name, price, cities], index) => ({
+  id: "base-" + index,
+  name,
+  price,
+  cities
+}));
+
+const KEY = "tibia-relic-loot-v1";
+const $ = id => document.getElementById(id);
+const money = number => new Intl.NumberFormat("pt-BR").format(number);
+
+let personal = [];
+let quantities = {};
+let saveAllowed = true;
+
+function validNumber(number) {
+  return Number.isInteger(number)
+    && number >= 0
+    && number <= 1000000000;
+}
+
+function message(text) {
+  $("status").textContent = text;
+}
+
+function allItems() {
+  return [...BASE, ...personal];
+}
+
+function validate(data) {
+  if (
+    !data
+    || data.version !== 1
+    || !Array.isArray(data.items)
+    || data.items.length > 5000
+    || !data.quantities
+    || typeof data.quantities !== "object"
+    || Array.isArray(data.quantities)
+  ) {
+    throw new Error("Formato de backup inválido.");
+  }
+
+  const ids = new Set(BASE.map(item => item.id));
+
+  const items = data.items.map(item => {
+    if (
+      !item
+      || typeof item.id !== "string"
+      || !/^custom-[a-zA-Z0-9-]{1,80}$/.test(item.id)
+      || ids.has(item.id)
+      || typeof item.name !== "string"
+      || !item.name.trim()
+      || item.name.length > 100
+      || !validNumber(item.price)
+      || !Array.isArray(item.cities)
+      || item.cities.length < 1
+      || item.cities.length > 3
+      || item.cities.some(city => !CITIES.includes(city))
+      || new Set(item.cities).size !== item.cities.length
+    ) {
+      throw new Error("Um dos itens do backup é inválido.");
+    }
+
+    ids.add(item.id);
+
+    return {
+      id: item.id,
+      name: item.name.trim(),
+      price: item.price,
+      cities: [...item.cities]
+    };
+  });
+
+  const counts = {};
+
+  for (const [id, quantity] of Object.entries(data.quantities)) {
+    if (!ids.has(id) || !validNumber(quantity)) {
+      throw new Error("Quantidade inválida no backup.");
+    }
+
+    counts[id] = quantity;
+  }
+
+  return { items, counts };
+}
+
+function save() {
+  if (!saveAllowed) {
+    message(
+      "O salvamento está pausado. Exporte um backup dos dados atuais. " +
+      "Se outra aba alterou os dados, recarregue esta página antes de continuar."
+    );
+    return;
+  }
+
+  try {
+    localStorage.setItem(KEY, JSON.stringify({
+      version: 1,
+      items: personal,
+      quantities
+    }));
+
+    message("Salvo neste navegador.");
+  } catch {
+    message(
+      "Não foi possível salvar neste navegador. " +
+      "Exporte um backup para guardar seus dados."
+    );
+  }
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY);
+
+    if (raw) {
+      const data = validate(JSON.parse(raw));
+      personal = data.items;
+      quantities = data.counts;
+    }
+  } catch {
+    saveAllowed = false;
+
+    message(
+      "Não foi possível carregar os dados salvos. " +
+      "Eles não foram sobrescritos. Você pode importar um backup válido."
+    );
+  }
+}
+
+function totalOf(item) {
+  return BigInt(item.price) * BigInt(quantities[item.id] || 0);
+}
+
+function updateTotal() {
+  let total = 0n;
+
+  for (const item of allItems()) {
+    total += totalOf(item);
+  }
+
+  $("grand-total").textContent = money(total) + " GP";
+}
+
+function cell(row, text, className) {
+  const td = document.createElement("td");
+  td.textContent = text;
+
+  if (className) {
+    td.className = className;
+  }
+
+  row.append(td);
+  return td;
+}
+
+function render() {
+  const fragment = document.createDocumentFragment();
+  const query = $("search").value.trim().toLocaleLowerCase("pt-BR");
+  let count = 0;
+
+  for (const item of allItems()) {
+    const searchableText = [item.name, ...item.cities]
+      .join(" ")
+      .toLocaleLowerCase("pt-BR");
+
+    if (query && !searchableText.includes(query)) {
+      continue;
+    }
+
+    count++;
+
+    const row = document.createElement("tr");
+    const nameCell = cell(row, item.name);
+
+    if (item.id.startsWith("custom-")) {
+      const tag = document.createElement("span");
+      tag.className = "personal";
+      tag.textContent = "Item pessoal";
+      nameCell.append(tag);
+    }
+
+    cell(row, money(item.price), "number");
+
+    const quantityCell = cell(row, "", "number");
+    const input = document.createElement("input");
+
+    input.type = "number";
+    input.min = "0";
+    input.max = "1000000000";
+    input.step = "1";
+    input.inputMode = "numeric";
+    input.value = quantities[item.id] || "";
+    input.setAttribute("aria-label", "Quantidade de " + item.name);
+
+    quantityCell.append(input);
+
+    const totalCell = cell(row, money(totalOf(item)), "number");
+
+    for (let index = 0; index < 3; index++) {
+      cell(
+        row,
+        item.cities[index] || (index === 0 ? "A definir" : "—")
+      );
+    }
+
+    input.addEventListener("input", () => {
+      input.setCustomValidity("");
+
+      const quantity = input.value === "" ? 0 : Number(input.value);
+
+      if (!input.validity.valid || !validNumber(quantity)) {
+        input.setCustomValidity(
+          "Use uma quantidade inteira entre 0 e 1.000.000.000."
+        );
+
+        message(
+          "Quantidade inválida. O total mantém a última quantidade válida."
+        );
+        return;
+      }
+
+      quantities[item.id] = quantity;
+      totalCell.textContent = money(totalOf(item));
+
+      updateTotal();
+      save();
+    });
+
+    fragment.append(row);
+  }
+
+  $("items").replaceChildren(fragment);
+  $("empty").hidden = count !== 0;
+  updateTotal();
+}
+
+for (let index = 1; index <= 3; index++) {
+  const select = $("city-" + index);
+
+  select.add(new Option(
+    index === 1 ? "Selecione uma cidade" : "Nenhuma",
+    ""
+  ));
+
+  for (const city of CITIES) {
+    select.add(new Option(city, city));
+  }
+}
+
+$("add").addEventListener("click", () => {
+  $("item-form").reset();
+  $("form-error").textContent = "";
+  $("item-dialog").showModal();
+  $("item-name").focus();
+});
+
+$("cancel").addEventListener("click", () => {
+  $("item-dialog").close();
+  $("add").focus();
+});
+
+$("item-form").addEventListener("submit", event => {
+  event.preventDefault();
+
+  const name = $("item-name").value.trim();
+  const price = Number($("item-price").value);
+
+  const cities = [1, 2, 3]
+    .map(index => $("city-" + index).value)
+    .filter(Boolean);
+
+  if (!name || !validNumber(price) || cities.length === 0) {
+    $("form-error").textContent =
+      "Preencha nome, preço inteiro em GP e pelo menos uma cidade.";
+    return;
+  }
+
+  if (new Set(cities).size !== cities.length) {
+    $("form-error").textContent = "Selecione cidades diferentes.";
+    return;
+  }
+
+  if (personal.length >= 5000) {
+    $("form-error").textContent = "O limite é de 5.000 itens pessoais.";
+    return;
+  }
+
+  personal.push({
+    id: "custom-" + crypto.randomUUID(),
+    name,
+    price,
+    cities
+  });
+
+  $("search").value = "";
+  $("item-dialog").close();
+
+  render();
+  save();
+
+  $("add").focus();
+});
+
+$("search").addEventListener("input", render);
+
+$("export").addEventListener("click", () => {
+  const backup = {
+    version: 1,
+    items: personal,
+    quantities
+  };
+
+  const blob = new Blob(
+    [JSON.stringify(backup, null, 2)],
+    { type: "application/json" }
+  );
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = "meu-loot-backup.json";
+
+  document.body.append(link);
+  link.click();
+  link.remove();
+
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+  message("Backup exportado. Guarde o arquivo para recuperar seus dados.");
+});
+
+$("import").addEventListener("click", () => {
+  $("backup-file").click();
+});
+
+$("backup-file").addEventListener("change", async event => {
+  const file = event.target.files[0];
+
+  if (!file) return;
+
+  try {
+    if (file.size > 2000000) {
+      throw new Error("O backup deve ter no máximo 2 MB.");
+    }
+
+    const data = validate(JSON.parse(await file.text()));
+
+    const confirmed = confirm(
+      "Importar este backup substituirá seus itens pessoais " +
+      "e quantidades atuais. Continuar?"
+    );
+
+    if (!confirmed) return;
+
+    personal = data.items;
+    quantities = data.counts;
+    saveAllowed = true;
+
+    render();
+    save();
+  } catch (error) {
+    message("Importação cancelada: " + error.message);
+  } finally {
+    event.target.value = "";
+  }
+});
+
+window.addEventListener("storage", event => {
+  if (event.key === KEY || event.key === null) {
+    saveAllowed = false;
+
+    message(
+      "Os dados foram alterados em outra aba. " +
+      "Recarregue esta página antes de continuar para evitar sobrescrever alterações."
+    );
+  }
+});
+
+load();
+render();
+</script>
+</body>
+</html>
