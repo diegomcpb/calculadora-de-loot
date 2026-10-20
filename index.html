@@ -56,7 +56,7 @@ function translateStatic(){
  while(node=walker.nextNode()){if(node.parentElement?.closest('script,style,#items,#status,#form-error,#filter-result,#city-options'))continue;const original=originalText.get(node)??node.nodeValue;originalText.set(node,original);const text=original.trim();if(TRANSLATIONS[text])node.nodeValue=original.replace(text,translateUI(text));}
  for(const element of document.querySelectorAll('[placeholder],[aria-label]')){if(element.closest('#items'))continue;let attrs=originalAttrs.get(element);if(!attrs){attrs={};for(const key of ['placeholder','aria-label'])if(element.hasAttribute(key))attrs[key]=element.getAttribute(key);originalAttrs.set(element,attrs);}for(const [key,value] of Object.entries(attrs))element.setAttribute(key,translateUI(value));}
  for(let i=1;i<=3;i++)$('city-'+i).options[0].text=translateUI(i===1?'Selecione uma cidade':'Nenhuma');
- for(const button of document.querySelectorAll('[data-lang]'))button.setAttribute('aria-pressed',String(button.dataset.lang===language));
+ for(const button of document.querySelectorAll('[data-lang]')){button.setAttribute('aria-pressed',String(button.dataset.lang===language));const label={pt:'Português',en:'English',es:'Español'}[button.dataset.lang];button.setAttribute('aria-label',label);const text=button.querySelector('span');if(text)text.textContent=label;}
  $('status').textContent=translateUI(lastStatus);$('form-error').textContent='';
 }
 function setLanguage(next){if(!LOCALES[next])return;language=next;try{localStorage.setItem('tibia-relic-language',language);}catch{}translateStatic();render();}
