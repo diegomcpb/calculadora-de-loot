@@ -13,6 +13,7 @@
 .sprite-image{display:block;width:36px;height:36px;object-fit:contain;image-rendering:pixelated}.sprite-image[hidden]{display:none}
 .sprite-image.native-sprite{width:32px;height:32px;margin:2px;image-rendering:pixelated}
 .filters{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}.filters label{font-size:14px;color:var(--muted);margin:0 0 6px}.filters input{width:100%;margin:0!important}.cities-cell{white-space:normal;min-width:180px;max-width:330px}.filter-result{font-size:13px;color:var(--muted);margin-bottom:10px}@media(max-width:600px){.filters{grid-template-columns:1fr}}
+.city-npc{position:relative;display:inline-block;cursor:help;border-bottom:1px dotted var(--muted)}.npc-tooltip{display:none;position:absolute;bottom:calc(100% + 7px);left:0;padding:6px 10px;background:#0a1018;color:#fff;border:1px solid var(--gold);border-radius:6px;white-space:nowrap;font-size:13px;font-weight:400;z-index:10;box-shadow:0 3px 12px #0008;pointer-events:none}.city-npc:hover .npc-tooltip,.city-npc:focus .npc-tooltip{display:block}.cities-cell{padding-top:22px;padding-bottom:22px}
 </style>
 </head>
 <body>
@@ -35,9 +36,9 @@
 </form></dialog>
 <script>
 'use strict';
-const CITIES=["Thais","Fibula","Darashia","Kazordoon","Outlaw Camp","Tiquanda","Djinn","Sawsank","Venore","Ab'dendriel","Thais (Hardek)"];
+const CITIES=["Thais","Fibula","Darashia","Kazordoon","Outlaw Camp","Tiquanda","Djinn","Sawsank","Venore","Ab'dendriel","Thais (Hardek)","Edron"];
 const BASE_DATA=[
-["Battle Axe",80,["Thais"]],
+["Battle Axe",80,["Edron","Venore","Thais"]],
 ["Battle Hammer",120,["Thais"]],
 ["Battle Shield",95,["Thais"]],
 ["Brass Armor",150,["Thais"]],
@@ -195,6 +196,19 @@ function addItemName(row,item){
  const text=document.createElement('span');text.className='item-copy';text.textContent=item.name;if(item.id.startsWith('custom-')){const tag=document.createElement('span');tag.className='personal';tag.textContent='Item pessoal';text.append(tag);}heading.append(text);td.append(heading);return td;
 }
 function normalizeSearch(text){return String(text).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR').replace(/[’‘]/g,"'").trim();}
+const SALE_NPCS={'base-0':{'Edron':'Willard','Venore':'Romella','Thais':'Sam'}};
+function cityCell(row,item){
+ const td=cell(row,'','cities-cell');
+ if(!item.cities.length){td.textContent='A definir';return;}
+ item.cities.forEach((city,index)=>{
+  if(index)td.append(document.createTextNode(', '));
+  const npc=SALE_NPCS[item.id]?.[city];
+  if(!npc){td.append(document.createTextNode(city));return;}
+  const cityName=document.createElement('span');cityName.className='city-npc';cityName.tabIndex=0;
+  const label=document.createElement('span');label.textContent=city;cityName.append(label);
+  const tooltip=document.createElement('span');tooltip.className='npc-tooltip';tooltip.setAttribute('role','tooltip');tooltip.id='npc-'+item.id+'-'+index;tooltip.textContent='NPC: '+npc;cityName.setAttribute('aria-describedby',tooltip.id);cityName.append(tooltip);td.append(cityName);
+ });
+}
 function render(){
  const fragment=document.createDocumentFragment(),query=normalizeSearch($('search').value),cityQuery=normalizeSearch($('city-filter').value);let count=0;
  for(const item of allItems()){
@@ -205,7 +219,7 @@ function render(){
   cell(tr,money(item.price),'number');const quantityCell=cell(tr,'','number');
   const input=document.createElement('input');input.type='number';input.min='0';input.max='1000000000';input.step='1';input.inputMode='numeric';input.setAttribute('aria-label','Quantidade de '+item.name);input.value=quantities[item.id]||'';quantityCell.append(input);
   const totalCell=cell(tr,money(totalOf(item)),'number');
-  cell(tr,item.cities.length?item.cities.join(', '):'A definir','cities-cell');
+  cityCell(tr,item);
   input.addEventListener('input',()=>{
    const number=input.value===''?0:Number(input.value);
    input.setCustomValidity('');
