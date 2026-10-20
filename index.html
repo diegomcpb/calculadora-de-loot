@@ -350,6 +350,15 @@ window.addEventListener('storage',event=>{if(event.key===KEY){message('Os dados 
 for(const button of document.querySelectorAll('[data-lang]'))button.addEventListener('click',()=>setLanguage(button.dataset.lang));
 load();translateStatic();render();
 </script>
+<script>
+// Close the donation message when scrolling on desktop or mobile.
+(() => {
+ const donate = document.querySelector('.parcel-donate');
+ if (!donate) return;
+ const closeDonate = () => { if (donate.open) donate.open = false; };
+ window.addEventListener('scroll', closeDonate, {passive:true, capture:true});
+})();
+</script>
 </body>
 </html>
 
