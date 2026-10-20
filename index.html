@@ -12,15 +12,16 @@
 .item-heading{display:flex;align-items:center;gap:12px;min-height:36px}.item-sprite{display:inline-block;width:36px;height:36px;position:relative;flex:0 0 36px;overflow:hidden;border-radius:5px;background:transparent}.sprite-crop{position:absolute;display:block;background-repeat:no-repeat;image-rendering:pixelated;transform-origin:top left}.item-copy{display:block}
 .sprite-image{display:block;width:36px;height:36px;object-fit:contain;image-rendering:pixelated}.sprite-image[hidden]{display:none}
 .sprite-image.native-sprite{width:32px;height:32px;margin:2px;image-rendering:pixelated}
+.filters{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}.filters label{font-size:14px;color:var(--muted);margin:0 0 6px}.filters input{width:100%;margin:0!important}.cities-cell{white-space:normal;min-width:180px;max-width:330px}.filter-result{font-size:13px;color:var(--muted);margin-bottom:10px}@media(max-width:600px){.filters{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <main>
 <header><div><a href="https://www.tibiarelic.com/" target="_blank" rel="noopener noreferrer" aria-label="Abrir site oficial do Tibia Relic"><img src="./tibia-relic-logo.png" alt="Tibia Relic" width="150" height="139" style="display:block;object-fit:contain;margin-bottom:12px"></a><h1>Calculadora de Loot</h1><p>Seus itens, suas quantidades e seu total em GP.</p></div><div class="total"><small>Valor total do loot</small><strong id="grand-total">0 GP</strong></div></header>
 <div class="tools"><button id="add" class="primary">+ Incluir item</button><button id="export">Exportar backup</button><button id="import">Importar backup</button><input type="file" id="backup-file" accept=".json,application/json" hidden></div>
-<label class="sr-only" for="search">Buscar item ou cidade</label><input id="search" type="search" placeholder="Buscar item ou cidade…">
-<div class="table-wrap"><table><thead><tr><th scope="col">Item</th><th scope="col" class="number">Preço (GP)</th><th scope="col" class="number">Quantidade</th><th scope="col" class="number">Total (GP)</th><th scope="col">Cidade 1</th><th scope="col">Cidade 2</th><th scope="col">Cidade 3</th></tr></thead><tbody id="items"></tbody></table></div>
-<p id="empty" hidden>Nenhum item encontrado.</p><p class="note">Edite as quantidades ou inclua seus próprios itens. Os itens e preços da base não podem ser editados nesta tela. O total inclui também os itens ocultos pela busca.</p>
+<div class="filters"><div><label for="search">Buscar item</label><input id="search" type="search" placeholder="Digite o nome do item…"></div><div><label for="city-filter">Filtrar por cidade</label><input id="city-filter" type="search" list="city-options" placeholder="Todas as cidades — digite para filtrar"><datalist id="city-options"></datalist></div></div>
+<p id="filter-result" class="filter-result" role="status" aria-live="polite"></p><div class="table-wrap"><table><thead><tr><th scope="col">Item</th><th scope="col" class="number">Preço (GP)</th><th scope="col" class="number">Quantidade</th><th scope="col" class="number">Total (GP)</th><th scope="col">Cidades de venda</th></tr></thead><tbody id="items"></tbody></table></div>
+<p id="empty" hidden>Nenhum item encontrado para os filtros informados.</p><p class="note">Edite as quantidades ou inclua seus próprios itens. Os itens e preços da base não podem ser editados nesta tela. O total inclui também os itens ocultos pela busca.</p>
 <div id="status" class="status" role="status" aria-live="polite"></div>
 <footer>Dados pessoais salvos neste navegador. Não são enviados a outros usuários. Exporte um backup antes de trocar de dispositivo ou limpar os dados do navegador.</footer>
 </main>
@@ -193,16 +194,18 @@ function addItemName(row,item){
  if(ITEM_SPRITES[item.name]){const box=document.createElement('span');box.className='item-sprite';box.setAttribute('aria-hidden','true');const image=document.createElement('img');image.className='sprite-image';image.alt='';image.width=36;image.height=36;if(DIRECT_SPRITES[item.name]){image.classList.add('native-sprite');image.width=32;image.height=32;}image.hidden=true;box.append(image);heading.append(box);spritePNG(item.name).then(url=>{image.src=url;image.hidden=false;}).catch(()=>{box.hidden=true;});}
  const text=document.createElement('span');text.className='item-copy';text.textContent=item.name;if(item.id.startsWith('custom-')){const tag=document.createElement('span');tag.className='personal';tag.textContent='Item pessoal';text.append(tag);}heading.append(text);td.append(heading);return td;
 }
+function normalizeSearch(text){return String(text).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR').replace(/[’‘]/g,"'").trim();}
 function render(){
- const fragment=document.createDocumentFragment(),query=$('search').value.trim().toLocaleLowerCase('pt-BR');let count=0;
+ const fragment=document.createDocumentFragment(),query=normalizeSearch($('search').value),cityQuery=normalizeSearch($('city-filter').value);let count=0;
  for(const item of allItems()){
-  if(query&&![item.name,...item.cities].join(' ').toLocaleLowerCase('pt-BR').includes(query))continue;
+  if(query&&!normalizeSearch(item.name).includes(query))continue;
+  if(cityQuery&&!item.cities.some(city=>normalizeSearch(city).includes(cityQuery)))continue;
   count++;const tr=document.createElement('tr');
   addItemName(tr,item);
   cell(tr,money(item.price),'number');const quantityCell=cell(tr,'','number');
   const input=document.createElement('input');input.type='number';input.min='0';input.max='1000000000';input.step='1';input.inputMode='numeric';input.setAttribute('aria-label','Quantidade de '+item.name);input.value=quantities[item.id]||'';quantityCell.append(input);
   const totalCell=cell(tr,money(totalOf(item)),'number');
-  for(let i=0;i<3;i++)cell(tr,item.cities[i]||(i===0?'A definir':'—'));
+  cell(tr,item.cities.length?item.cities.join(', '):'A definir','cities-cell');
   input.addEventListener('input',()=>{
    const number=input.value===''?0:Number(input.value);
    input.setCustomValidity('');
@@ -210,7 +213,7 @@ function render(){
    quantities[item.id]=number;totalCell.textContent=money(totalOf(item));updateTotal();save();
   });fragment.append(tr);
  }
- $('items').replaceChildren(fragment);$('empty').hidden=count!==0;updateTotal();
+ $('items').replaceChildren(fragment);$('empty').hidden=count!==0;$('filter-result').textContent=count+' de '+allItems().length+' itens';updateTotal();
 }
 for(let i=1;i<=3;i++){
  const select=$('city-'+i);select.add(new Option(i===1?'Selecione uma cidade':'Nenhuma',''));
@@ -223,9 +226,11 @@ $('item-form').addEventListener('submit',event=>{
  if(!name||!validNumber(price)||cities.length===0){$('form-error').textContent='Preencha nome, preço inteiro em GP e pelo menos uma cidade.';return;}
  if(new Set(cities).size!==cities.length){$('form-error').textContent='Selecione cidades diferentes.';return;}
  if(personal.length>=5000){$('form-error').textContent='O limite é de 5.000 itens pessoais.';return;}
- personal.push({id:'custom-'+crypto.randomUUID(),name,price,cities});$('search').value='';$('item-dialog').close();render();save();$('add').focus();
+ personal.push({id:'custom-'+crypto.randomUUID(),name,price,cities});$('search').value='';$('city-filter').value='';$('item-dialog').close();render();save();$('add').focus();
 });
 $('search').addEventListener('input',render);
+$('city-filter').addEventListener('input',render);
+for(const city of CITIES)$('city-options').append(new Option(city,city));
 $('export').addEventListener('click',()=>{
  const blob=new Blob([JSON.stringify({version:1,items:personal,quantities},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='meu-loot-backup.json';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);message('Backup exportado. Guarde o arquivo para recuperar seus dados.');
 });
