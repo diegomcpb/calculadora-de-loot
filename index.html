@@ -63,7 +63,7 @@ function translateStatic(){
 function setLanguage(next){if(!LOCALES[next])return;language=next;try{localStorage.setItem('tibia-relic-language',language);}catch{}translateStatic();render();}
 function placeholderIcon(box){box.classList.add('item-placeholder');const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d','M5 5h14v14H5z M8 14l3-3 3 3 2-2 3 4 M9 8h.01');path.setAttribute('fill','none');path.setAttribute('stroke','currentColor');path.setAttribute('stroke-width','1.5');path.setAttribute('stroke-linecap','round');svg.append(path);box.append(svg);}
 
-const CITIES=["Thais","Fibula","Darashia","Kazordoon","Outlaw Camp","Tiquanda","Djinn","Sawsank","Venore","Ab'dendriel","Thais (Hardek)","Edron","Carlin","Rookgaard"];
+const CITIES=["Thais","Fibula","Darashia","Kazordoon","Outlaw Camp","Tiquanda","Djinn","Sawsank","Venore","Ab'dendriel","Edron","Carlin","Rookgaard"];
 const BASE_DATA=[
 ["Battle Axe",80,["Edron","Venore","Thais"]],
 ["Battle Hammer",120,["Edron","Venore","Thais"]],
@@ -175,11 +175,11 @@ function validate(data){
  if(!data||data.version!==1||!Array.isArray(data.items)||data.items.length>5000||!data.quantities||typeof data.quantities!=='object'||Array.isArray(data.quantities))throw Error(translateUI("Formato de backup inválido."));
  const ids=new Set(BASE.map(x=>x.id));
  const items=data.items.map(x=>{
-  if(!x||typeof x.id!=='string'||!/^custom-[a-zA-Z0-9-]{1,80}$/.test(x.id)||ids.has(x.id)||typeof x.name!=='string'||!x.name.trim()||x.name.length>100||!validNumber(x.price)||!Array.isArray(x.cities)||x.cities.length<1||x.cities.length>3||x.cities.some(c=>!CITIES.includes(c))||new Set(x.cities).size!==x.cities.length)throw Error(translateUI("Um dos itens do backup é inválido."));
+  if(!x||typeof x.id!=='string'||!/^custom-[a-zA-Z0-9-]{1,80}$/.test(x.id)||ids.has(x.id)||typeof x.name!=='string'||!x.name.trim()||x.name.length>100||!validNumber(x.price)||!Array.isArray(x.cities)||x.cities.length<1||x.cities.length>3||x.cities.some(c=>!CITIES.includes(c)&&c!=='Thais (Hardek)')||new Set(x.cities).size!==x.cities.length)throw Error(translateUI("Um dos itens do backup é inválido."));
   if(x.unitWeight!==undefined&&(!Number.isFinite(x.unitWeight)||x.unitWeight<0||x.unitWeight>1000000))throw Error(translateUI('Preencha um peso unitário válido em oz.'));
-  const npcs={};if(x.npcs!==undefined){if(!x.npcs||typeof x.npcs!=='object'||Array.isArray(x.npcs))throw Error(translateUI('NPC inválido no backup.'));for(const [city,npc] of Object.entries(x.npcs)){if(!x.cities.includes(city)||typeof npc!=='string'||npc.length>100)throw Error(translateUI('NPC inválido no backup.'));npcs[city]=npc.trim();}}
+  const npcs={};if(x.npcs!==undefined){if(!x.npcs||typeof x.npcs!=='object'||Array.isArray(x.npcs))throw Error(translateUI('NPC inválido no backup.'));for(const [city,npc] of Object.entries(x.npcs)){if(!x.cities.includes(city)||typeof npc!=='string'||npc.length>100)throw Error(translateUI('NPC inválido no backup.'));npcs[city==='Thais (Hardek)'?'Thais':city]=npc.trim();}}
  if(x.image!==undefined&&(typeof x.image!=='string'||x.image.length>699100||!/^data:image\/png;base64,iVBORw0KGgo[A-Za-z0-9+/]*={0,2}$/.test(x.image)))throw Error(translateUI('Imagem inválida no backup.'));
- ids.add(x.id);return {id:x.id,name:x.name.trim(),price:x.price,cities:[...x.cities],npcs,...(x.image?{image:x.image}:{}),...(x.unitWeight!==undefined?{unitWeight:x.unitWeight}:{})};
+ ids.add(x.id);return {id:x.id,name:x.name.trim(),price:x.price,cities:[...new Set(x.cities.map(c=>c==='Thais (Hardek)'?'Thais':c))],npcs,...(x.image?{image:x.image}:{}),...(x.unitWeight!==undefined?{unitWeight:x.unitWeight}:{})};
  });
  const counts={};for(const [id,n] of Object.entries(data.quantities)){if(!ids.has(id)||!validNumber(n))throw Error(translateUI("Quantidade inválida no backup."));counts[id]=n;}
  const bpCounts={};if(data.backpacks!==undefined){if(!data.backpacks||typeof data.backpacks!=='object'||Array.isArray(data.backpacks))throw Error(translateUI('Quantidade inválida no backup.'));for(const [id,n] of Object.entries(data.backpacks)){if(!ids.has(id)||!validNumber(n))throw Error(translateUI('Quantidade inválida no backup.'));bpCounts[id]=n;}}
