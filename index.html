@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Calculadora pessoal de loot. Cadastre itens, informe quantidades e veja o total em GP.">
+<title>Calculadora de Loot • Tibia Relic</title>
+<style>
+:root{color-scheme:dark;--bg:#111820;--panel:#1b2633;--line:#344457;--text:#edf2f7;--muted:#b0becf;--gold:#ecc46c}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,sans-serif}main{max-width:1280px;margin:auto;padding:32px 20px}header{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}h1{font-size:clamp(25px,5vw,36px);margin:0}h2{margin:0 0 18px;font-size:24px}.brand{color:var(--gold);font-weight:700;letter-spacing:.12em;font-size:12px}p{color:var(--muted);margin:8px 0 20px}.total{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 24px;min-width:240px}.total small{display:block;color:var(--muted)}.total strong{font-size:30px;color:var(--gold)}.tools{display:flex;flex-wrap:wrap;gap:10px;margin:24px 0 16px}button,.file-button{font:inherit;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--text);padding:10px 16px;cursor:pointer}.primary{background:var(--gold);color:#1b2028;border-color:var(--gold);font-weight:700}button:hover,.file-button:hover{filter:brightness(1.12)}:focus-visible{outline:3px solid var(--gold);outline-offset:3px}input,select{font:inherit;color:var(--text);background:#111b27;border:1px solid #60758c;border-radius:6px;padding:9px;max-width:100%}#search{width:100%;margin-bottom:16px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:10px}table{width:100%;border-collapse:collapse;white-space:nowrap}th,td{padding:13px 16px;text-align:left;border-bottom:1px solid var(--line)}th{background:#253448;font-size:13px;color:#d7e1ee}tbody tr:nth-child(even){background:#17212d}tbody tr:last-child td{border-bottom:0}.number{text-align:right}td input{width:110px;text-align:right}td input:invalid{border-color:#ff8e8e}td:first-child{font-weight:600}.personal{display:block;color:var(--gold);font-size:11px;font-weight:400}.note{font-size:13px;margin-top:14px}.status{min-height:25px;color:var(--gold)}dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:24px;width:min(94vw,480px);max-height:90vh}dialog::backdrop{background:#000b}label{display:block;margin-top:14px}label input,label select{display:block;width:100%;margin-top:5px}.actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px}#form-error{color:#ffaaaa}footer{color:var(--muted);font-size:13px;margin-top:24px}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}@media(max-width:600px){main{padding:24px 12px}.total{width:100%}th,td{padding:10px}}
+</style>
+</head>
+<body>
+<main>
+<header><div><div class="brand">TIBIA RELIC</div><h1>Calculadora de Loot</h1><p>Seus itens, suas quantidades e seu total em GP.</p></div><div class="total"><small>Valor total do loot</small><strong id="grand-total">0 GP</strong></div></header>
+<div class="tools"><button id="add" class="primary">+ Incluir item</button><button id="export">Exportar backup</button><button id="import">Importar backup</button><input type="file" id="backup-file" accept=".json,application/json" hidden></div>
+<label class="sr-only" for="search">Buscar item ou cidade</label><input id="search" type="search" placeholder="Buscar item ou cidade…">
+<div class="table-wrap"><table><thead><tr><th scope="col">Item</th><th scope="col" class="number">Preço (GP)</th><th scope="col" class="number">Quantidade</th><th scope="col" class="number">Total (GP)</th><th scope="col">Cidade 1</th><th scope="col">Cidade 2</th><th scope="col">Cidade 3</th></tr></thead><tbody id="items"></tbody></table></div>
+<p id="empty" hidden>Nenhum item encontrado.</p><p class="note">Edite as quantidades ou inclua seus próprios itens. Os itens e preços da base não podem ser editados nesta tela. O total inclui também os itens ocultos pela busca.</p>
+<div id="status" class="status" role="status" aria-live="polite"></div>
+<footer>Dados pessoais salvos neste navegador. Não são enviados a outros usuários. Exporte um backup antes de trocar de dispositivo ou limpar os dados do navegador. Dark Armor e Dark Helmet aguardam a definição da cidade.</footer>
+</main>
+<dialog id="item-dialog" aria-labelledby="dialog-title"><form id="item-form"><h2 id="dialog-title">Incluir item</h2><p>O item será adicionado apenas à sua calculadora.</p>
+<label>Nome do item<input id="item-name" maxlength="100" required autocomplete="off"></label>
+<label>Preço em GP<input id="item-price" type="number" min="0" max="1000000000" step="1" required></label>
+<label>Cidade 1 (obrigatória)<select id="city-1" required></select></label>
+<label>Cidade 2 (opcional)<select id="city-2"></select></label>
+<label>Cidade 3 (opcional)<select id="city-3"></select></label>
+<p id="form-error" role="alert"></p><div class="actions"><button type="button" id="cancel">Cancelar</button><button type="submit" class="primary">Incluir item</button></div>
+</form></dialog>
+<script>
+'use strict';
+const CITIES=['Thais','Fibula','Darashia','Kazordoon','Outlaw Camp','Tiquanda','Djinn','Sawsank','Venore'];
+const BASE_DATA=[
+['Battle Axe',80,['Thais']],['Battle Hammer',120,['Thais']],['Battle Shield',95,['Thais']],['Brass Armor',150,['Thais']],['Brass Legs',49,['Thais']],['Chain Armor',70,['Thais']],['Crossbow',160,['Fibula']],['Dark Armor',400,[]],['Dark Helmet',200,[]],['Double Axe',260,['Darashia']],['Dwarven Shield',100,['Kazordoon']],['Halberd',400,['Thais']],['Longsword',51,['Thais']],['Mace',30,['Thais']],['Morning Star',100,['Darashia','Kazordoon']],['Plate Armor',400,['Thais']],['Plate Legs',115,['Thais','Kazordoon']],['Plate Shield',45,['Darashia','Kazordoon']],['Scale Armor',75,['Outlaw Camp']],['Steel Helmet',293,['Darashia','Kazordoon']],['Steel Shield',80,['Darashia','Kazordoon']],['Sword',25,['Thais']],['Two Handed Sword',450,['Thais']]
+];
+const BASE=BASE_DATA.map(([name,price,cities],i)=>({id:'base-'+i,name,price,cities}));
+const KEY='tibia-relic-loot-v1', $=id=>document.getElementById(id);
+const money=n=>new Intl.NumberFormat('pt-BR').format(n);
+const validNumber=n=>Number.isInteger(n)&&n>=0&&n<=1000000000;
+let personal=[],quantities={},saveAllowed=true;
+function message(text){$('status').textContent=text;}
+function allItems(){return [...BASE,...personal];}
+function validate(data){
+ if(!data||data.version!==1||!Array.isArray(data.items)||data.items.length>5000||!data.quantities||typeof data.quantities!=='object'||Array.isArray(data.quantities))throw Error('Formato de backup inválido.');
+ const ids=new Set(BASE.map(x=>x.id));
+ const items=data.items.map(x=>{
+  if(!x||typeof x.id!=='string'||!/^custom-[a-zA-Z0-9-]{1,80}$/.test(x.id)||ids.has(x.id)||typeof x.name!=='string'||!x.name.trim()||x.name.length>100||!validNumber(x.price)||!Array.isArray(x.cities)||x.cities.length<1||x.cities.length>3||x.cities.some(c=>!CITIES.includes(c))||new Set(x.cities).size!==x.cities.length)throw Error('Um dos itens do backup é inválido.');
+  ids.add(x.id);return {id:x.id,name:x.name.trim(),price:x.price,cities:[...x.cities]};
+ });
+ const counts={};for(const [id,n] of Object.entries(data.quantities)){if(!ids.has(id)||!validNumber(n))throw Error('Quantidade inválida no backup.');counts[id]=n;}
+ return {items,counts};
+}
+function save(){
+ if(!saveAllowed){message('O salvamento está pausado para preservar um backup antigo inválido. Exporte os dados atuais ou importe um backup válido.');return;}
+ try{localStorage.setItem(KEY,JSON.stringify({version:1,items:personal,quantities}));message('Salvo neste navegador.');}
+ catch{message('Não foi possível salvar neste navegador. Exporte um backup para guardar seus dados.');}
+}
+function load(){
+ try{const raw=localStorage.getItem(KEY);if(raw){const data=validate(JSON.parse(raw));personal=data.items;quantities=data.counts;}}
+ catch{saveAllowed=false;message('Não foi possível carregar os dados salvos. Eles não foram sobrescritos. Você pode importar um backup válido.');}
+}
+function totalOf(item){return BigInt(item.price)*BigInt(quantities[item.id]||0);}
+function updateTotal(){let total=0n;for(const item of allItems())total+=totalOf(item);$('grand-total').textContent=money(total)+' GP';}
+function cell(row,text,cls){const td=document.createElement('td');td.textContent=text;if(cls)td.className=cls;row.append(td);return td;}
+function render(){
+ const fragment=document.createDocumentFragment(),query=$('search').value.trim().toLocaleLowerCase('pt-BR');let count=0;
+ for(const item of allItems()){
+  if(query&&![item.name,...item.cities].join(' ').toLocaleLowerCase('pt-BR').includes(query))continue;
+  count++;const tr=document.createElement('tr');
+  const name=cell(tr,item.name);if(item.id.startsWith('custom-')){const tag=document.createElement('span');tag.className='personal';tag.textContent='Item pessoal';name.append(tag);}
+  cell(tr,money(item.price),'number');const quantityCell=cell(tr,'','number');
+  const input=document.createElement('input');input.type='number';input.min='0';input.max='1000000000';input.step='1';input.inputMode='numeric';input.setAttribute('aria-label','Quantidade de '+item.name);input.value=quantities[item.id]||'';quantityCell.append(input);
+  const totalCell=cell(tr,money(totalOf(item)),'number');
+  for(let i=0;i<3;i++)cell(tr,item.cities[i]||(i===0?'A definir':'—'));
+  input.addEventListener('input',()=>{
+   const number=input.value===''?0:Number(input.value);
+   input.setCustomValidity('');
+   if(!input.validity.valid||!validNumber(number)){input.setCustomValidity('Use uma quantidade inteira entre 0 e 1.000.000.000.');message('Quantidade inválida. O total mantém a última quantidade válida.');return;}
+   quantities[item.id]=number;totalCell.textContent=money(totalOf(item));updateTotal();save();
+  });fragment.append(tr);
+ }
+ $('items').replaceChildren(fragment);$('empty').hidden=count!==0;updateTotal();
+}
+for(let i=1;i<=3;i++){
+ const select=$('city-'+i);select.add(new Option(i===1?'Selecione uma cidade':'Nenhuma',''));
+ for(const city of CITIES)select.add(new Option(city,city));
+}
+$('add').addEventListener('click',()=>{$('item-form').reset();$('form-error').textContent='';$('item-dialog').showModal();$('item-name').focus();});
+$('cancel').addEventListener('click',()=>{$('item-dialog').close();$('add').focus();});
+$('item-form').addEventListener('submit',event=>{
+ event.preventDefault();const name=$('item-name').value.trim(),price=Number($('item-price').value),cities=[1,2,3].map(i=>$('city-'+i).value).filter(Boolean);
+ if(!name||!validNumber(price)||cities.length===0){$('form-error').textContent='Preencha nome, preço inteiro em GP e pelo menos uma cidade.';return;}
+ if(new Set(cities).size!==cities.length){$('form-error').textContent='Selecione cidades diferentes.';return;}
+ if(personal.length>=5000){$('form-error').textContent='O limite é de 5.000 itens pessoais.';return;}
+ personal.push({id:'custom-'+crypto.randomUUID(),name,price,cities});$('search').value='';$('item-dialog').close();render();save();$('add').focus();
+});
+$('search').addEventListener('input',render);
+$('export').addEventListener('click',()=>{
+ const blob=new Blob([JSON.stringify({version:1,items:personal,quantities},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='meu-loot-backup.json';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);message('Backup exportado. Guarde o arquivo para recuperar seus dados.');
+});
+$('import').addEventListener('click',()=>$('backup-file').click());
+$('backup-file').addEventListener('change',async event=>{
+ const file=event.target.files[0];if(!file)return;
+ try{
+  if(file.size>2000000)throw Error('O backup deve ter no máximo 2 MB.');
+  const data=validate(JSON.parse(await file.text()));
+  if(!confirm('Importar este backup substituirá seus itens pessoais e quantidades atuais. Continuar?'))return;
+  personal=data.items;quantities=data.counts;saveAllowed=true;render();save();
+ }catch(error){message('Importação cancelada: '+error.message);}finally{event.target.value='';}
+});
+window.addEventListener('storage',event=>{if(event.key===KEY){message('Os dados foram alterados em outra aba. Recarregue esta página antes de continuar para evitar sobrescrever alterações.');saveAllowed=false;}});
+load();render();
+</script>
+</body>
+</html>
