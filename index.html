@@ -305,9 +305,14 @@ function cityCell(row,item){
  });
 }
 const selectedCities=new Set();
+const selectedItems=new Set();
+try{const stored=JSON.parse(localStorage.getItem('relicloot-selected-items-v1')||'[]');if(Array.isArray(stored))for(const id of stored)if(typeof id==='string')selectedItems.add(id);}catch{}
+function saveSelectedItems(){try{localStorage.setItem('relicloot-selected-items-v1',JSON.stringify([...selectedItems]));}catch{}}
+
 function render(){
  const fragment=document.createDocumentFragment(),query=normalizeSearch($('search').value),cityQuery=normalizeSearch($('city-filter').value);let count=0;
  for(const item of allItems()){
+  if(!selectedItems.has(item.id))continue;
   if(query&&!normalizeSearch(item.name).includes(query))continue;
   if(selectedCities.size?!item.cities.some(city=>selectedCities.has(city)):(cityQuery&&!item.cities.some(city=>normalizeSearch(city).includes(cityQuery))))continue;
   count++;const tr=document.createElement('tr');
@@ -337,7 +342,7 @@ $('item-form').addEventListener('submit',async event=>{
  if(!name||!validNumber(price)||cities.length===0){$('form-error').textContent=translateUI("Preencha nome, preço inteiro em GP e pelo menos uma cidade.");return;}
  if(new Set(cities).size!==cities.length){$('form-error').textContent=translateUI("Selecione cidades diferentes.");return;}
  if(personal.length>=5000){$('form-error').textContent=translateUI("O limite é de 5.000 itens pessoais.");return;}
- savingNewItem=true;try{const image=await readPersonalPNG();const npcs={};saleRows.forEach((row,index)=>{const npc=row.npc.value.trim();if(npc)npcs[cities[index]]=npc;});personal.push({id:'custom-'+crypto.randomUUID(),name,price,cities,unitWeight,npcs,...(image?{image}:{})});}catch(error){$('form-error').textContent=error.message;return;}finally{savingNewItem=false;}$('search').value='';$('city-filter').value='';$('item-dialog').close();render();save();$('add').focus();
+ savingNewItem=true;try{const image=await readPersonalPNG();const npcs={};saleRows.forEach((row,index)=>{const npc=row.npc.value.trim();if(npc)npcs[cities[index]]=npc;});personal.push({id:'custom-'+crypto.randomUUID(),name,price,cities,unitWeight,npcs,...(image?{image}:{})});}catch(error){$('form-error').textContent=error.message;return;}finally{savingNewItem=false;}$('search').value='';$('city-filter').value='';$('item-dialog').close();if(personal.length){selectedItems.add(personal[personal.length-1].id);saveSelectedItems();}render();save();$('add').focus();
 });
 $('add-place').addEventListener('click',addSalePlace);$('choose-image').addEventListener('click',()=>$('item-image').click());$('item-image').addEventListener('change',localizeSaleRows);
 $('search').addEventListener('input',render);
@@ -346,10 +351,10 @@ for(const city of CITIES)$('city-options').append(new Option(city,city));
 $('clear-all').addEventListener('click',()=>{
  const d=$('clear-dialog');d.returnValue='';translateStatic();d.showModal();
 });
-$('clear-dialog').addEventListener('close',()=>{if($('clear-dialog').returnValue!=='clear')return;personal=[];quantities={};backpacks={};saveAllowed=true;selectedCities.clear();document.dispatchEvent(new Event('cities-reset'));$('search').value='';$('city-filter').value='';save();render();message('');});
+$('clear-dialog').addEventListener('close',()=>{if($('clear-dialog').returnValue!=='clear')return;personal=[];quantities={};backpacks={};saveAllowed=true;selectedItems.clear();saveSelectedItems();selectedCities.clear();document.dispatchEvent(new Event('cities-reset'));$('search').value='';$('city-filter').value='';save();render();message('');});
 window.addEventListener('storage',event=>{if(event.key===KEY){message('Os dados foram alterados em outra aba. Recarregue esta página antes de continuar para evitar sobrescrever alterações.');saveAllowed=false;}});
 for(const button of document.querySelectorAll('[data-lang]'))button.addEventListener('click',()=>setLanguage(button.dataset.lang));
-load();translateStatic();render();
+load();for(const item of allItems())if((quantities[item.id]||0)>0||(backpacks[item.id]||0)>0)selectedItems.add(item.id);saveSelectedItems();translateStatic();render();
 </script>
 <script>
 // Close the donation message when scrolling on desktop or mobile.
@@ -380,7 +385,7 @@ load();translateStatic();render();
 (()=>{
  const field=$('search'),wrap=document.createElement('div');wrap.className='item-search-wrap';field.before(wrap);wrap.append(field);const list=document.createElement('div');list.id='search-item-options';list.className='item-search-dropdown';list.setAttribute('role','listbox');list.hidden=true;wrap.append(list);
  function close(){list.hidden=true;field.setAttribute('aria-expanded','false');}
- function open(){list.replaceChildren();const query=normalizeSearch(field.value);const items=allItems().filter(item=>(!query||normalizeSearch(item.name).includes(query))&&(!selectedCities.size||item.cities.some(c=>selectedCities.has(c))));for(const item of items){const b=document.createElement('button');b.type='button';b.className='item-search-option';b.setAttribute('role','option');const picture=document.createElement('span');picture.className='item-search-picture';const img=document.createElement('img');img.alt='';img.width=32;img.height=32;picture.append(img);if(item.image||ITEM_SPRITES[item.name]){(item.image?Promise.resolve(item.image):spritePNG(item.name)).then(url=>img.src=url).catch(()=>{picture.replaceChildren();placeholderIcon(picture);});}else{picture.replaceChildren();placeholderIcon(picture);}const text=document.createElement('span');text.textContent=item.name;const price=document.createElement('small');price.textContent=money(item.price)+' GP';text.append(price);b.append(picture,text);b.onclick=()=>{field.value=item.name;field.dispatchEvent(new Event('input',{bubbles:true}));close();};list.append(b);}if(!items.length){const empty=document.createElement('div');empty.className='city-empty';empty.textContent='—';list.append(empty);}list.hidden=false;field.setAttribute('aria-expanded','true');}
+ function open(){list.replaceChildren();const query=normalizeSearch(field.value);const items=allItems().filter(item=>(!query||normalizeSearch(item.name).includes(query))&&(!selectedCities.size||item.cities.some(c=>selectedCities.has(c))));for(const item of items){const b=document.createElement('button');b.type='button';b.className='item-search-option';b.setAttribute('role','option');const picture=document.createElement('span');picture.className='item-search-picture';const img=document.createElement('img');img.alt='';img.width=32;img.height=32;picture.append(img);if(item.image||ITEM_SPRITES[item.name]){(item.image?Promise.resolve(item.image):spritePNG(item.name)).then(url=>img.src=url).catch(()=>{picture.replaceChildren();placeholderIcon(picture);});}else{picture.replaceChildren();placeholderIcon(picture);}const text=document.createElement('span');text.textContent=item.name;const price=document.createElement('small');price.textContent=money(item.price)+' GP';text.append(price);b.append(picture,text);b.onclick=()=>{selectedItems.add(item.id);saveSelectedItems();field.value='';render();close();};list.append(b);}if(!items.length){const empty=document.createElement('div');empty.className='city-empty';empty.textContent='—';list.append(empty);}list.hidden=false;field.setAttribute('aria-expanded','true');}
  field.addEventListener('focus',open);field.addEventListener('click',()=>{if(list.hidden)open();});field.addEventListener('input',open);field.addEventListener('keydown',e=>{if(e.key==='Escape')close();if(e.key==='ArrowDown'){e.preventDefault();open();list.querySelector('button')?.focus();}});list.addEventListener('keydown',e=>{const buttons=[...list.querySelectorAll('button')],i=buttons.indexOf(document.activeElement);if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();buttons[(i+(e.key==='ArrowDown'?1:-1)+buttons.length)%buttons.length]?.focus();}if(e.key==='Escape'){field.focus();close();}});document.addEventListener('pointerdown',e=>{if(!wrap.contains(e.target))close();});wrap.addEventListener('focusout',()=>setTimeout(()=>{if(!wrap.contains(document.activeElement))close();},0));for(const b of document.querySelectorAll('[data-lang]'))b.addEventListener('click',close);$('clear-all').addEventListener('click',close);
 })();
 </script>
