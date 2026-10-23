@@ -634,7 +634,23 @@ body:has(dialog[open]) #floating-gold{opacity:0;visibility:hidden;transition:opa
 (()=>{const sync=()=>document.documentElement.classList.toggle('loot-tab-hidden',document.hidden);document.addEventListener('visibilitychange',sync);sync();if('IntersectionObserver' in window){const observer=new IntersectionObserver(entries=>{for(const e of entries)e.target.classList.toggle('effects-paused',!e.isIntersecting);},{rootMargin:'80px'});document.querySelectorAll('.hunt-shortcut').forEach(el=>observer.observe(el));}})();
 </script><style id="loot-wide-screen-fluid-margins">
 @media(min-width:1001px){main{width:100%;max-width:none;padding-inline:clamp(24px,4vw,96px)}}
-</style></html>
+</style><style id="loot-dialogs-glass-smooth">
+#item-dialog,#clear-dialog{border:1px solid #cbd5db38;border-radius:13px;background:linear-gradient(135deg,rgba(16,24,30,.68),rgba(8,15,21,.76));backdrop-filter:blur(7px) saturate(110%);-webkit-backdrop-filter:blur(7px) saturate(110%);box-shadow:inset 0 1px 0 #ffffff22,inset 0 -1px 0 #0005,0 12px 30px #0005;color:#e8edf1;max-width:calc(100vw - 28px);max-height:90dvh}
+#item-dialog::backdrop,#clear-dialog::backdrop{background:#03080d70;backdrop-filter:blur(3px);animation:lootModalBackdropIn .6s ease-in-out both}
+#item-dialog.loot-modal-closing::backdrop,#clear-dialog.loot-modal-closing::backdrop{animation:lootModalBackdropOut .6s ease-in-out both}
+#item-dialog h2,#clear-dialog h2{font-family:Georgia,serif;color:#e8cb8d;font-weight:600}
+@keyframes lootModalBackdropIn{from{background:#03080d00;backdrop-filter:blur(0)}to{background:#03080d70;backdrop-filter:blur(3px)}}
+@keyframes lootModalBackdropOut{from{background:#03080d70;backdrop-filter:blur(3px)}to{background:#03080d00;backdrop-filter:blur(0)}}
+@media(prefers-reduced-motion:reduce){#item-dialog::backdrop,#clear-dialog::backdrop{animation:none!important}}
+</style>
+<script id="loot-dialogs-shared-fade">
+(()=>{const reduced=matchMedia('(prefers-reduced-motion: reduce)');for(const id of ['item-dialog','clear-dialog']){const dialog=document.getElementById(id),nativeShow=dialog.showModal.bind(dialog),nativeClose=dialog.close.bind(dialog);let motion=null,closing=false,token=0;
+ dialog.showModal=function(){if(dialog.open)return;token++;closing=false;if(motion)motion.cancel();dialog.classList.remove('loot-modal-closing');nativeShow();if(!reduced.matches){motion=dialog.animate([{opacity:0},{opacity:1}],{duration:600,easing:'cubic-bezier(.4,0,.2,1)',fill:'both'});const current=motion;current.finished.then(()=>{if(motion===current&&!closing){current.cancel();motion=null;}}).catch(()=>{});}};
+ dialog.close=function(value){if(!dialog.open||closing)return;closing=true;const version=++token;if(motion){motion.cancel();motion=null;}const finish=()=>{if(version!==token)return;nativeClose(value);dialog.classList.remove('loot-modal-closing');closing=false;if(motion){motion.cancel();motion=null;}};if(reduced.matches){finish();return;}dialog.classList.add('loot-modal-closing');motion=dialog.animate([{opacity:1},{opacity:0}],{duration:600,easing:'cubic-bezier(.4,0,.2,1)',fill:'both'});motion.finished.then(finish).catch(()=>{});};
+ dialog.addEventListener('cancel',e=>{e.preventDefault();dialog.close();});
+ if(id==='clear-dialog')dialog.addEventListener('submit',e=>{if(e.target.getAttribute('method')==='dialog'){e.preventDefault();dialog.close(e.submitter?.value||'cancel');}},true);
+}})();
+</script></html>
 
 
 
