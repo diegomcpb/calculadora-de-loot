@@ -632,7 +632,9 @@ body:has(dialog[open]) #floating-gold{opacity:0;visibility:hidden;transition:opa
 </style>
 <script id="loot-effects-visibility">
 (()=>{const sync=()=>document.documentElement.classList.toggle('loot-tab-hidden',document.hidden);document.addEventListener('visibilitychange',sync);sync();if('IntersectionObserver' in window){const observer=new IntersectionObserver(entries=>{for(const e of entries)e.target.classList.toggle('effects-paused',!e.isIntersecting);},{rootMargin:'80px'});document.querySelectorAll('.hunt-shortcut').forEach(el=>observer.observe(el));}})();
-</script></html>
+</script><style id="loot-wide-screen-fluid-margins">
+@media(min-width:1001px){main{width:100%;max-width:none;padding-inline:clamp(24px,4vw,96px)}}
+</style></html>
 
 
 
