@@ -654,3 +654,23 @@ body:has(dialog[open]) #floating-gold{opacity:0;visibility:hidden;transition:opa
  }
 })();
 </script>
+<style id="loot-simplified-search-and-mobile-cue">
+#item-glass-help{display:none!important}
+#search:focus::placeholder{color:transparent;opacity:0}
+#search::placeholder{font-size:11px;opacity:.65}
+.tools{justify-content:flex-start}
+.tools #add{margin-left:0}
+.loot-table-scroll-shell{position:relative;min-width:0;max-width:100%}
+.loot-mobile-scroll-cue{display:none}
+@media(max-width:600px){.loot-mobile-scroll-cue{position:absolute;right:7px;top:10px;z-index:4;display:grid;place-items:center;width:28px;height:26px;border-radius:6px;background:#253448e8;color:#e3c68a;font:400 21px/1 system-ui,sans-serif;pointer-events:none;opacity:1;transition:opacity .3s}.loot-mobile-scroll-cue[hidden]{display:none}.loot-table-scroll-shell>.table-wrap{width:100%;max-width:100%}}
+</style>
+<script id="loot-search-prompt-and-scroll-cue">
+(()=>{const field=document.getElementById('search');document.getElementById('item-glass-help')?.remove();field.removeAttribute('aria-describedby');field.removeAttribute('title');document.getElementById('clear-all')?.remove();
+ const prompts={pt:'Adicione o item que você quer incluir na calculadora',en:'Add the item you want to include in the calculator',es:'Añade el objeto que quieres incluir en la calculadora'};
+ const table=document.getElementById('relic-loot-table'),wrap=table.parentElement,shell=document.createElement('div');shell.className='loot-table-scroll-shell';wrap.before(shell);shell.append(wrap);const cue=document.createElement('span');cue.className='loot-mobile-scroll-cue';cue.textContent='↔';cue.setAttribute('role','img');shell.append(cue);let frame=0;
+ function update(){frame=0;cue.hidden=wrap.scrollWidth<=wrap.clientWidth+2||wrap.scrollLeft>=wrap.scrollWidth-wrap.clientWidth-4;}
+ function schedule(){if(!frame)frame=requestAnimationFrame(update);}
+ function words(){field.placeholder=prompts[language];cue.setAttribute('aria-label',({pt:'Deslize para o lado para ver mais informações',en:'Swipe sideways to see more information',es:'Desliza hacia un lado para ver más información'})[language]);schedule();}
+ for(const b of document.querySelectorAll('[data-lang]'))b.addEventListener('click',words);wrap.addEventListener('scroll',schedule,{passive:true});window.addEventListener('resize',schedule,{passive:true});if('ResizeObserver' in window)new ResizeObserver(schedule).observe(wrap);new MutationObserver(schedule).observe(table,{childList:true,subtree:true});words();
+})();
+</script>
